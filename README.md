@@ -22,7 +22,10 @@ For a manual install, download the source ZIP from [Release v0.9](https://github
 
 1. Open the [official LM Studio download page](https://lmstudio.ai/download), download the LM Studio installer for your OS, and run it. On Windows, choose **Download LM Studio for Windows**.
 2. Open **Discover** in LM Studio and search for `pfnet/plamo-3-translate-0.8b-GGUF`. Select the result from **pfnet**, then download `plamo-3-translate-0.8b-Q4_K_M.gguf` under **Download Options**. It is about 0.57 GB. [Official PLaMo model card](https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF) · [LM Studio model download guide](https://lmstudio.ai/docs/app/basics/download-model)
-3. In LM Studio, open **Developer** and turn on **Start server**. Keep it on the same computer as Forge-Neo. The extension defaults to `http://127.0.0.1:1234`. [LM Studio local server guide](https://lmstudio.ai/docs/developer/core/server)
+3. In LM Studio, open **Model Server** (called **Developer** in some versions) and turn on the server switch. Confirm it shows **Status: Running**. Run the server on the same computer as Forge-Neo. The extension defaults to `http://127.0.0.1:1234`. [LM Studio local server guide](https://lmstudio.ai/docs/developer/core/server)
+
+   ![LM Studio’s Model Server showing the green switch and Status: Running](docs/images/lm-studio-model-server.png)
+
 4. In Forge-Neo, click the translator's gear icon. Enter the server URL and model ID, then click **Test Connection**. If the model ID differs, select the PLaMo model from **Available models** and test again. When **Connected to LM Studio. Ready** appears, click **Save**. Enter an API token only if you enabled authentication in LM Studio.
 
 ![Finding the official PLaMo model in LM Studio Discover](docs/images/lm-studio-model-search.png)
@@ -70,7 +73,10 @@ https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 
 1. [LM Studio 公式ダウンロードページ](https://lmstudio.ai/download) から、お使いの OS 用の LM Studio インストーラーをダウンロードして実行します。Windows では **Download LM Studio for Windows** を選びます。
 2. LM Studio の **Discover** を開き、`pfnet/plamo-3-translate-0.8b-GGUF` を検索します。配布元が **pfnet** のモデルを選び、**Download Options** から `plamo-3-translate-0.8b-Q4_K_M.gguf`（約0.57 GB）をダウンロードします。 [公式モデル](https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF) · [LM Studio 公式のモデル取得手順](https://lmstudio.ai/docs/app/basics/download-model)
-3. LM Studio の **Developer** で **Start server** をオンにします。Forge-Neo と同じ PC で起動してください。拡張の接続先の初期値は `http://127.0.0.1:1234` です。 [ローカルサーバーの公式手順](https://lmstudio.ai/docs/developer/core/server)
+3. LM Studio の **Model Server**（バージョンによっては **Developer**）を開き、サーバーのスイッチをオンにします。**Status: Running** と表示されたことを確認してください。Forge-Neo と同じ PC で起動します。拡張の接続先の初期値は `http://127.0.0.1:1234` です。 [ローカルサーバーの公式手順](https://lmstudio.ai/docs/developer/core/server)
+
+   ![LM Studio の Model Server でスイッチが緑になり、Status: Running と表示された状態](docs/images/lm-studio-model-server.png)
+
 4. Forge-Neo の翻訳パネルの歯車を押し、接続先とモデル ID を入力して **Test Connection** を押します。ID が異なる場合は **Available models** から PLaMo を選び、もう一度接続確認します。**Connected to LM Studio. Ready** が緑で表示されたら **Save** を押します。LM Studio で認証を有効にした場合は API トークンも入力します。
 
 ![LM Studio で pfnet の公式 PLaMo モデルを検索](docs/images/lm-studio-model-search.png)
