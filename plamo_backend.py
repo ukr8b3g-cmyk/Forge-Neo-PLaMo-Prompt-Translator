@@ -7,6 +7,7 @@ import re
 from urllib.parse import urlsplit
 
 import httpx
+from anyio import fail_after
 
 DEFAULT_URL = "http://127.0.0.1:1234"
 DEFAULT_MODEL = "plamo-3-translate-0.8b"
@@ -55,7 +56,7 @@ async def request(config, token, path, payload=None):
         headers["Authorization"] = f"Bearer {token}"
     timeout = config["timeout"]
     try:
-        async with asyncio.timeout(timeout):
+        with fail_after(timeout):
             async with httpx.AsyncClient(
                 trust_env=False, follow_redirects=False,
                 timeout=httpx.Timeout(timeout, connect=min(3, timeout)),
@@ -184,7 +185,7 @@ async def translate(config, token, source, target, on_use=None):
     if not config["model"]:
         raise TranslationError("model")
 
-    async with asyncio.timeout(config["timeout"]):
+    with fail_after(config["timeout"]):
         instance_id, context_length = await prepare_model(config, token)
         if on_use is not None:
             on_use(instance_id)

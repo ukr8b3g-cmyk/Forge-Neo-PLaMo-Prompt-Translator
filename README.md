@@ -2,21 +2,23 @@
 
 # PLaMo Translator for Forge-Neo
 
-Translate prompts between Japanese and English inside [Stable Diffusion WebUI Forge - Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo). The panel sits below the Positive prompt in txt2img and img2img. [LM Studio](https://lmstudio.ai/) runs PLaMo 3 Translate locally.
+Translate prompts between Japanese and English in [Stable Diffusion WebUI Forge - Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) or reForge. The panel sits below the Positive prompt in txt2img and img2img. [LM Studio](https://lmstudio.ai/) runs PLaMo 3 Translate locally.
 
 ![PLaMo Translator panel in Forge-Neo](docs/images/forge-neo-translator.png)
 
 ## Install the Forge-Neo extension
 
-1. In Forge-Neo, open **Extensions → Install from URL**.
+1. In Forge-Neo or reForge, open **Extensions → Install from URL**.
 2. Enter the URL below and select **Install**.
-3. Restart Forge-Neo and refresh the browser. Open **PLaMo Translator** below the Positive prompt.
+3. Restart the WebUI and refresh the browser. Open **PLaMo Translator** below the Positive prompt.
 
 ```text
 https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 ```
 
 For a manual install, download the source ZIP from [Release v0.9](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v0.9). Extract its top-level folder into the Forge-Neo `extensions` directory, then restart Forge-Neo. The extension folder should directly contain `scripts/`, `javascript/`, `plamo_backend.py`, and `style.css`.
+
+For reForge, install using the URL above or download the [main branch source ZIP](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/archive/refs/heads/main.zip) for a manual install. The v0.9 release ZIP is for Forge-Neo.
 
 ## Install LM Studio and download PLaMo
 
@@ -49,25 +51,27 @@ For a manual install, download the source ZIP from [Release v0.9](https://github
 - Edit the translation or use **Copy**. Choose **Add** to append it to Positive or **Rep** to replace Positive, then click **Send**. **Undo** restores the previous prompt when it has not been edited since Send.
 - Enable **Auto-unload** to free the translation model after the selected idle time. **Unload Now** releases the selected model immediately. The next translation loads it again.
 
-Verified on Windows with Forge Neo (neo branch, Gradio 4.40.0) and LM Studio 0.4.28. LM Studio and the PLaMo model are obtained separately.
+Verified on Windows with Forge Neo (Gradio 4.40.0), reForge (Gradio 3.41.2, Python 3.10), and LM Studio 0.4.28. LM Studio and the PLaMo model are obtained separately.
 
 ## 日本語
 
-[PLaMo 3 Translate](https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF) と [LM Studio](https://lmstudio.ai/) を使って、Forge-Neo のプロンプトを日本語 ⇄ 英語に翻訳する拡張です。txt2img・img2img の Positive 直下に翻訳パネルが追加されます。翻訳はローカルで行います。
+[PLaMo 3 Translate](https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF) と [LM Studio](https://lmstudio.ai/) を使って、Forge-Neo・reForge のプロンプトを日本語 ⇄ 英語に翻訳する拡張です。txt2img・img2img の Positive 直下に翻訳パネルが追加されます。翻訳はローカルで行います。
 
 ![Forge-Neo の PLaMo Translator パネル](docs/images/forge-neo-translator.png)
 
 ### Forge-Neo に拡張をインストール
 
-1. Forge-Neo で **Extensions → Install from URL** を開きます。
+1. Forge-Neo または reForge で **Extensions → Install from URL** を開きます。
 2. 下の URL を入力して **Install** を押します。
-3. Forge-Neo を再起動し、ブラウザーを再読み込みします。Positive の下に **PLaMo Translator** が表示されます。
+3. WebUI を再起動し、ブラウザーを再読み込みします。Positive の下に **PLaMo Translator** が表示されます。
 
 ```text
 https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 ```
 
 手動で導入する場合は、[v0.9 Release](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v0.9) のソース ZIP を展開し、展開したフォルダーを Forge-Neo の `extensions` に入れて再起動します。拡張フォルダーの直下に `scripts/`、`javascript/`、`plamo_backend.py`、`style.css` がある状態にします。
+
+reForge では、上の URL からインストールするか、[main ブランチのソース ZIP](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/archive/refs/heads/main.zip) を使って手動で導入してください。v0.9 のリリース ZIP は Forge-Neo 用です。
 
 ### LM Studio のインストールとモデルのダウンロード
 
@@ -100,5 +104,5 @@ https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 - 訳文は編集・**Copy** ができます。**Add** は追記、**Rep** は置換です。反映方法を選び **Send** を押します。反映後の Positive が編集されていなければ **Undo** で戻せます。
 - **Auto-unload** をオンにすると、翻訳に使ったモデルが指定時間後に解放されます。**Unload Now** で即時解放でき、次の翻訳時に再ロードされます。
 
-Windows の Forge Neo（neo ブランチ、Gradio 4.40.0）と LM Studio 0.4.28 で確認済みです。LM Studio 本体と PLaMo モデルは別途入手してください。日本語ロケールでは日本語、英語または未設定のロケールでは英語で表示します。
+Windows の Forge Neo（Gradio 4.40.0）、reForge（Gradio 3.41.2、Python 3.10）、LM Studio 0.4.28 で確認済みです。LM Studio 本体と PLaMo モデルは別途入手してください。日本語ロケールでは日本語、英語または未設定のロケールでは英語で表示します。
 

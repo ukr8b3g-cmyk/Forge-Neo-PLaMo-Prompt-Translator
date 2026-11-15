@@ -2,6 +2,7 @@
 
 import asyncio
 import importlib.util
+import inspect
 import logging
 import time
 import weakref
@@ -9,7 +10,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import gradio as gr
-from gradio.context import get_blocks_context
+from anyio import fail_after
+
+try:
+    from gradio.context import get_blocks_context
+except ImportError:  # Gradio 3 stores the active build on Context.
+    from gradio.context import Context
+
+    def get_blocks_context():
+        return Context.root_block
 
 from modules import script_callbacks, shared
 from modules.options import options_section
@@ -177,11 +186,11 @@ async def handle(request):
             if action == "translate":
                 return await translate(config, token, request.get("source"), request.get("target"))
             if action == "prepare":
-                async with asyncio.timeout(config["timeout"]):
+                with fail_after(config["timeout"]):
                     await backend.prepare_model(config, token)
                 return {"status": "ready"}
             if action == "unload":
-                async with asyncio.timeout(config["timeout"]):
+                with fail_after(config["timeout"]):
                     model, instance = backend.find_model(await backend.list_models(config, token), config["model"])
                     if model is None:
                         return {"status": "modelNotFound"}
@@ -271,8 +280,9 @@ def insert_panel(component, **kwargs):
         send = gr.Button(visible=False)
         payload = gr.JSON(visible=False)
         reply = gr.JSON(visible=False)
+        options = {"show_api": False} if "show_api" in inspect.signature(send.click).parameters else {}
         send.click(handle, inputs=payload, outputs=reply, queue=False, api_name="plamo_translate",
-                   show_api=False, show_progress="hidden")
+                   show_progress="hidden", **options)
     gr.HTML(PANEL.format(tab=tab), elem_id=f"plamo_{tab}", elem_classes=["plamo-translator"])
     tabs.add(tab)
 
