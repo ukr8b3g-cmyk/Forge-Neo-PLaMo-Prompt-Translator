@@ -107,6 +107,31 @@
     margin: 0;
 }
 
+.plamo-translator .plamo-direction {
+    display: flex;
+    min-inline-size: 0;
+    block-size: var(--plamo-control-height);
+}
+
+.plamo-translator .plamo-direction [data-field="direction"] {
+    flex: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+.plamo-translator .plamo-direction [data-action="languages"] {
+    flex: 0 0 24px;
+    inline-size: 24px;
+    padding: 0;
+    border-inline-start: 0;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+}
+
 .plamo-translator .plamo-toolbar .plamo-controls {
     display: contents;
 }
@@ -232,9 +257,16 @@
 
 .plamo-translator .plamo-summary-status:not(:empty) {
     min-inline-size: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
     font-weight: normal;
+}
+
+@container (max-width: 700px) {
+    .plamo-translator .plamo-summary {
+        flex-wrap: wrap;
+        gap: 2px 8px;
+        white-space: normal;
+    }
 }
 
 .plamo-translator .plamo-status:empty {
@@ -247,6 +279,7 @@
 .plamo-translator .plamo-restore,
 .plamo-translator .plamo-settings-fields label {
     display: grid;
+    align-content: end;
     gap: 3px;
     min-width: 0;
 }

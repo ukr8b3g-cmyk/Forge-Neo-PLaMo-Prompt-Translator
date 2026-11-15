@@ -35,6 +35,7 @@ DEFAULTS = {
     "url": backend.DEFAULT_URL,
     "model": backend.DEFAULT_MODEL,
     "timeout": backend.DEFAULT_TIMEOUT,
+    "max_tokens": backend.DEFAULT_MAX_TOKENS,
     "auto_unload": False,
     "idle_seconds": 300,
 }
@@ -58,7 +59,8 @@ def register_settings():
     labels = {
         "url": "LM Studio の接続先",
         "model": "LM Studio のモデル ID",
-        "timeout": "翻訳のタイムアウト（秒）",
+        "timeout": "翻訳全体のタイムアウト（秒）",
+        "max_tokens": "最大出力トークン数／1回",
         "auto_unload": "自動アンロード",
         "idle_seconds": "アンロードまでの待ち時間（秒）",
     }
@@ -135,7 +137,7 @@ def idle_settings(request):
     return {"auto_unload": enabled, "idle_seconds": seconds}
 
 
-async def translate(config, token, source, target):
+async def translate(config, token, source, target, source_lang="auto"):
     key = None
 
     def on_use(instance_id):
@@ -144,7 +146,7 @@ async def translate(config, token, source, target):
         stop_unload(key)
 
     try:
-        return await backend.translate(config, token, source, target, on_use)
+        return await backend.translate(config, token, source, target, on_use, source_lang)
     finally:
         if key is not None and getattr(shared.opts, PREFIX + "auto_unload"):
             model = IdleModel({**config, "timeout": min(config["timeout"], 10)}, token, time.monotonic())
@@ -184,7 +186,7 @@ async def handle(request):
                         stop_unload(key)
                 return {"status": "saved", "config": config}
             if action == "translate":
-                return await translate(config, token, request.get("source"), request.get("target"))
+                return await translate(config, token, request.get("source"), request.get("target"), request.get("source_lang", "auto"))
             if action == "prepare":
                 with fail_after(config["timeout"]):
                     await backend.prepare_model(config, token)
@@ -215,7 +217,10 @@ PANEL = """
   <div class="plamo-body">
     <div class="plamo-toolbar">
       <div class="plamo-controls">
-        <button type="button" data-field="direction" value="en">Japanese → English</button>
+        <div class="plamo-direction">
+          <button type="button" data-field="direction" value="en">Auto → English</button>
+          <button type="button" data-action="languages" data-label="languageSettings" data-tooltip="languageSettings" aria-haspopup="dialog">▾</button>
+        </div>
         <button type="button" data-action="translate" class="plamo-primary">Translate</button>
         <button type="button" data-action="append" class="plamo-send" data-text="send" disabled>Send</button>
       </div>
@@ -237,6 +242,16 @@ PANEL = """
   </div>
 </details>
 <button type="button" data-action="settings" class="plamo-settings-toggle" data-label="settings" data-tooltip="settings" aria-label="Settings" aria-haspopup="dialog"><span aria-hidden="true">⚙</span></button>
+<dialog class="plamo-settings plamo-languages" data-label="languageSettings">
+  <div class="plamo-settings-head">
+    <strong data-text="languageSettings">Languages</strong>
+    <button type="button" data-action="close-languages" data-label="close">×</button>
+  </div>
+  <div class="plamo-settings-fields">
+    <label><span data-text="sourceLanguage">Source language</span><select data-field="source-language"><option value="auto">Auto</option>__LANGUAGES__</select></label>
+    <label><span data-text="targetLanguage">Translate to</span><select data-field="target-language">__LANGUAGES__</select></label>
+  </div>
+</dialog>
 <dialog class="plamo-settings" aria-label="LM Studio Settings" data-label="settingsTitle">
   <div class="plamo-settings-head">
     <strong data-text="settingsTitle">LM Studio Settings</strong>
@@ -246,8 +261,10 @@ PANEL = """
     <label class="plamo-full"><span data-text="urlLabel">Server URL</span><input data-field="url" type="url" placeholder="http://127.0.0.1:1234" spellcheck="false"></label>
     <label class="plamo-full"><span data-text="modelLabel">Model ID</span><input data-field="model" type="text" spellcheck="false" autocomplete="off"></label>
     <label class="plamo-full" data-field="model-picker" hidden><span data-text="models">Available models</span><select data-field="models"></select></label>
-    <label><span data-text="timeoutLabel">Timeout (seconds)</span><input data-field="timeout" type="number" min="1" max="600" step="1"></label>
-    <label><span data-text="token">API token (optional)</span><input data-field="token" type="password" autocomplete="off"></label>
+    <label><span data-text="timeoutLabel">Total timeout (seconds)</span><input data-field="timeout" type="number" min="1" max="600" step="1"></label>
+    <label><span data-text="maxTokens">Maximum output tokens</span><select data-field="max_tokens"><option>256</option><option selected>512</option><option>1024</option><option>2048</option></select></label>
+    <span class="plamo-full plamo-status" data-text="tokensHint">Per segment. The combined translation can exceed this limit.</span>
+    <label class="plamo-full"><span data-text="token">API token (optional)</span><input data-field="token" type="password" autocomplete="off"></label>
     <label class="plamo-auto-unload"><input data-field="auto_unload" type="checkbox"><span data-text="autoUnload">Auto-unload</span></label>
     <label><span data-text="idleSeconds">Idle time (seconds)</span><input data-field="idle_seconds" type="number" min="1" step="1" disabled></label>
   </div>
@@ -260,6 +277,7 @@ PANEL = """
   <div class="plamo-status" data-field="settings-status" role="status"></div>
 </dialog>
 """
+PANEL = PANEL.replace("__LANGUAGES__", "".join(f'<option value="{code}">{code}</option>' for code in backend.LANGUAGES))
 
 
 def insert_panel(component, **kwargs):

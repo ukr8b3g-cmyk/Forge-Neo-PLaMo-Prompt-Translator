@@ -4,6 +4,7 @@ import asyncio
 import ipaddress
 import json
 import re
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
@@ -12,6 +13,20 @@ from anyio import fail_after
 DEFAULT_URL = "http://127.0.0.1:1234"
 DEFAULT_MODEL = "plamo-3-translate-0.8b"
 DEFAULT_TIMEOUT = 60
+DEFAULT_MAX_TOKENS = 512
+LANGUAGES = tuple(json.loads(Path(__file__).with_name("languages.json").read_text(encoding="utf-8")))
+MAX_SOURCE_CHARS = 16_000
+MAX_SOURCE_BYTES = 64 * 1024
+MAX_OUTPUT_CHARS = 64_000
+MAX_OUTPUT_BYTES = 256 * 1024
+MAX_CHUNK_CHARS = 2_000
+MIN_RETRY_CHARS = 64
+SPLIT_BOUNDARIES = (
+    re.compile(r"\r?\n(?:[^\S\r\n]*\r?\n)+"),
+    re.compile(r"\r\n?|\n"),
+    re.compile(r"(?<=[。！？!?])[^\S\r\n]*|(?<=\.)[^\S\r\n]+"),
+    re.compile(r"[^\S\r\n]+"),
+)
 STOP = ["<|plamo:tag|>", "<|plamo:bos|>"]
 CONTROL_TOKEN = re.compile(r"<\|plamo:[^>]*\|>", re.IGNORECASE)
 PROMPT_SYNTAX = re.compile(r"<[^<>\n]+:[^<>\n]+>|[()[\]\\]|\b(?:AND|BREAK)\b|__[^_\n].*?__|:\s*[+-]?(?:\d+(?:\.\d+)?|\.\d+)[ \t]*$", re.MULTILINE)
@@ -45,7 +60,11 @@ def settings(payload):
         raise TranslationError("model")
     if type(timeout) is not int or not 1 <= timeout <= 600:
         raise TranslationError("timeout_value")
-    return {"url": f"http://{address}:{port}", "model": model.strip(), "timeout": timeout}
+    max_tokens = payload.get("max_tokens", DEFAULT_MAX_TOKENS)
+    if type(max_tokens) is not int or max_tokens not in (256, 512, 1024, 2048):
+        raise TranslationError("tokens_value")
+    return {"url": f"http://{address}:{port}", "model": model.strip(), "timeout": timeout,
+            "max_tokens": max_tokens}
 
 
 async def request(config, token, path, payload=None):
@@ -69,13 +88,22 @@ async def request(config, token, path, payload=None):
                         raise TranslationError("auth")
                     if reply.status_code == 404:
                         raise TranslationError("missing")
-                    if not reply.is_success:
-                        raise TranslationError("server")
                     content = bytearray()
                     async for chunk in reply.aiter_bytes(chunk_size=65536):
                         content.extend(chunk)
                         if len(content) > 1024 * 1024:
                             raise TranslationError("response")
+                    if not reply.is_success:
+                        # Retry only a diagnosed context limit, never transport/auth/server failures.
+                        try:
+                            diagnostic = json.loads(content).get("error", {})
+                            message = json.dumps(diagnostic).lower()
+                        except (ValueError, AttributeError, RecursionError):
+                            message = ""
+                        if (400 <= reply.status_code < 500 and "context" in message
+                                and any(word in message for word in ("length", "window", "exceed", "overflow", "limit", "token"))):
+                            raise TranslationError("context")
+                        raise TranslationError("server")
     except (TimeoutError, httpx.TimeoutException):
         raise TranslationError("deadline") from None
     except httpx.HTTPError:
@@ -175,33 +203,21 @@ async def prepare_model(config, token):
     return instance_id, context_size(loaded.get("load_config"))
 
 
-async def translate(config, token, source, target, on_use=None):
-    if target not in ("en", "ja") or not isinstance(source, str) or not source.strip():
-        raise TranslationError("input")
-    if len(source) > 2000 or len(source.encode("utf-8", errors="replace")) > 8000:
-        raise TranslationError("size")
-    if CONTROL_TOKEN.search(source) or PROMPT_SYNTAX.search(source):
-        raise TranslationError("syntax")
-    if not config["model"]:
-        raise TranslationError("model")
+def split_source(source, start, limit):
+    """Preserve the separator while preferring paragraphs, lines, sentences, then words."""
+    for pattern in SPLIT_BOUNDARIES:
+        boundary = None
+        for match in pattern.finditer(source, start):
+            if match.start() > limit:
+                break
+            if match.end() < len(source):
+                boundary = match
+        if boundary is not None:
+            return source[:boundary.start()], boundary.group(), source[boundary.end():]
+    return source[:limit], "", source[limit:]
 
-    with fail_after(config["timeout"]):
-        instance_id, context_length = await prepare_model(config, token)
-        if on_use is not None:
-            on_use(instance_id)
-        # The UTF-8 byte count is a conservative preflight estimate for the
-        # byte-fallback tokenizer. Leave room for the template and output.
-        if type(context_length) is int and len(source.encode("utf-8", errors="replace")) + 640 > context_length:
-            raise TranslationError("context")
-        response = await request(config, token, "/v1/chat/completions", {
-            "model": instance_id,
-            "messages": [
-                {"role": "system", "content": f"[plamo-translate]\ntarget_lang={target}"},
-                {"role": "user", "content": source},
-            ],
-            "temperature": 0, "max_tokens": 512, "stop": STOP, "stream": False,
-        })
 
+def read_completion(response):
     choices = response.get("choices")
     if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
         raise TranslationError("response")
@@ -214,7 +230,69 @@ async def translate(config, token, source, target, on_use=None):
         or CONTROL_TOKEN.search(text) or message.get("tool_calls") or message.get("function_call")
     ):
         raise TranslationError("response")
-    return {"status": "translated" if reason == "stop" else "partial", "text": text}
+    validate_output(text)
+    return text, reason == "stop"
+
+
+def validate_output(text):
+    if len(text) > MAX_OUTPUT_CHARS or len(text.encode("utf-8", errors="replace")) > MAX_OUTPUT_BYTES:
+        raise TranslationError("output_size")
+
+
+async def translate_piece(config, token, instance_id, context_length, source, target, source_lang):
+    if len(source) <= MAX_CHUNK_CHARS:
+        max_tokens = config.get("max_tokens", DEFAULT_MAX_TOKENS)
+        system = f"[plamo-translate]\ntarget_lang={target}"
+        if source_lang != "auto":
+            system += f"\nsource_lang={source_lang}"
+        try:
+            # Retain the conservative byte-fallback preflight, splitting instead of
+            # rejecting long input. All pieces share the outer total deadline.
+            if type(context_length) is int and len(source.encode("utf-8")) + max_tokens + 128 > context_length:
+                raise TranslationError("context")
+            response = await request(config, token, "/v1/chat/completions", {
+                "model": instance_id,
+                "messages": [{"role": "system", "content": system}, {"role": "user", "content": source}],
+                "temperature": 0, "max_tokens": max_tokens, "stop": STOP, "stream": False,
+            })
+        except TranslationError as error:
+            if str(error) != "context" or len(source.strip()) < MIN_RETRY_CHARS:
+                raise
+        else:
+            text, complete = read_completion(response)
+            if complete or len(source.strip()) < MIN_RETRY_CHARS:
+                return text, complete
+
+    source = source.strip()
+    start, limit = (1, MAX_CHUNK_CHARS) if len(source) > MAX_CHUNK_CHARS else (len(source) // 4, len(source) // 2)
+    head, separator, tail = split_source(source, start, limit)
+    left, complete = await translate_piece(config, token, instance_id, context_length, head, target, source_lang)
+    if not complete:
+        return left, False
+    right, complete = await translate_piece(config, token, instance_id, context_length, tail, target, source_lang)
+    joined = left.rstrip() + (separator or " ") + right.lstrip()
+    validate_output(joined)
+    return joined, complete
+
+
+async def translate(config, token, source, target, on_use=None, source_lang="auto"):
+    if target not in LANGUAGES or (source_lang != "auto" and source_lang not in LANGUAGES):
+        raise TranslationError("language")
+    if not isinstance(source, str) or not source.strip():
+        raise TranslationError("input")
+    if len(source) > MAX_SOURCE_CHARS or len(source.encode("utf-8", errors="replace")) > MAX_SOURCE_BYTES:
+        raise TranslationError("size")
+    if CONTROL_TOKEN.search(source) or PROMPT_SYNTAX.search(source):
+        raise TranslationError("syntax")
+    if not config["model"]:
+        raise TranslationError("model")
+
+    with fail_after(config["timeout"]):
+        instance_id, context_length = await prepare_model(config, token)
+        if on_use is not None:
+            on_use(instance_id)
+        text, complete = await translate_piece(config, token, instance_id, context_length, source, target, source_lang)
+    return {"status": "translated" if complete else "partial", "text": text}
 
 
 async def unload(config, token, instance_id):

@@ -8,8 +8,13 @@
     const strings = {
         heading: ["PLaMo Translator","PLaMo 翻訳"],
         direction: ["Translation direction","翻訳方向"],
-        toEnglish: ["Japanese → English","日本語 → 英語"],
-        toJapanese: ["English → Japanese","英語 → 日本語"],
+        languageSettings: ["Languages","言語選択"],
+        sourceLanguage: ["Source language","原文の言語"],
+        targetLanguage: ["Translate to","翻訳先"],
+        auto: ["Auto","自動"],
+        swapHint: ["Swap source and target languages","原文と翻訳先の言語を入れ替える"],
+        simplifiedChinese: ["Chinese (Simplified)","中国語（簡体字）"],
+        traditionalChinese: ["Chinese (Traditional)","中国語（繁体字）"],
         import: ["Import Positive","Positive 取込"],
         importHint: ["Copy the current Positive prompt into the source field","現在の Positive を原文欄に取り込む"],
         translate: ["Translate","翻訳"],
@@ -31,7 +36,12 @@
         urlLabel: ["Server URL","接続先 URL"],
         modelLabel: ["Model ID","モデル ID"],
         models: ["Available models","接続先のモデル"],
-        timeoutLabel: ["Timeout (seconds)","タイムアウト（秒）"],
+        timeoutLabel: ["Total timeout (seconds)","全体タイムアウト（秒）"],
+        maxTokens: ["Maximum output tokens","最大出力トークン数／1回"],
+        tokensHint: ["Per segment. The combined translation can exceed this limit.","分割した各区間の上限です。結合後の訳文はこの上限を超えられます。"],
+        tokens_value: ["Choose 256, 512, 1024 or 2048 output tokens.","最大出力トークン数は256・512・1024・2048から選んでください。"],
+        language: ["Choose supported source and target languages.","対応する原文の言語と翻訳先を選んでください。"],
+        output_size: ["The combined translation is too large. Shorten the source.","結合後の訳文が長すぎます。原文を短くしてください。"],
         token: ["API token (optional)","API トークン（任意）"],
         autoUnload: ["Auto-unload","自動アンロード"],
         unloadNow: ["Unload Now","今すぐアンロード"],
@@ -51,7 +61,7 @@
         busy: ["Another request is running. Try again when it finishes.","先に開始した処理が終わってから、もう一度お試しください。"],
         connection: ["Could not connect to LM Studio. Check its server and URL.","LM Studio に接続できません。起動状態と接続先を確認してください。"],
         context: ["The source exceeds the model's context. Shorten it and try again.","原文がモデルのコンテキストに収まりません。原文を短くしてください。"],
-        deadline: ["The request timed out. Check the server and timeout.","時間内に応答がありませんでした。接続先とタイムアウトを確認してください。"],
+        deadline: ["Timed out. Gear → Total timeout.","時間切れ。歯車 → 全体タイムアウトを確認。"],
         input: ["Enter text to translate.","原文を入力してください。"],
         missing: ["The LM Studio API or model could not be found.","LM Studio の API またはモデルが見つかりません。"],
         model: ["Check the LM Studio model ID.","LM Studio のモデル ID を確認してください。"],
@@ -59,7 +69,7 @@
         response: ["LM Studio did not return a valid translation.","LM Studio から有効な訳文が返りませんでした。"],
         save: ["Could not save the Forge settings.","Forge の設定を保存できませんでした。"],
         server: ["LM Studio could not complete the request. Check its Developer tab.","LM Studio で処理できませんでした。Developer 画面を確認してください。"],
-        size: ["Keep the source under 2,000 characters.","原文は 2,000 文字以内にしてください。"],
+        size: ["Keep the source within 16,000 characters / 64 KiB.","原文は16,000文字・64 KiB以内にしてください。"],
         syntax: ["The source contains prompt syntax. Enter only the text you want translated.","原文に LoRA、重み、括弧などのプロンプト構文があります。翻訳する文章だけを入力してください。"],
         timeout_value: ["Use a whole number from 1 to 600 seconds.","タイムアウトは 1～600 秒の整数で指定してください。"],
         modelNotFound: ["Model not found","モデルが見つかりません"],
@@ -82,8 +92,9 @@
         saved: ["Settings saved.","設定を保存しました。"],
         cancelled: ["Cancelled. You can translate again when the request ends.","中止しました。通信終了後に再度翻訳できます。"],
         translating: ["Translating…","翻訳中…"],
+        translatingLong: ["Translating in segments…","長文を分割して翻訳中…"],
         discarded: ["The source or direction changed. Translate again.","原文か翻訳方向が変わりました。翻訳し直してください。"],
-        partial: ["Translation stopped early. Shorten the source and try again.","訳文が途中で終了しました。原文を短くして再度翻訳してください。"],
+        partial: ["Output cut off. Gear → Maximum output tokens.","訳文が途中。歯車 → 最大出力トークン数"],
         translated: ["Translation ready.","翻訳しました。"],
         oldResult: ["The previous translation is still shown.","前回の訳文を表示しています。"],
         copied: ["Translation copied.","訳文をコピーしました。"],
@@ -149,6 +160,7 @@
             url: opts.plamo_translator_url ?? "http://127.0.0.1:1234",
             model: opts.plamo_translator_model ?? "plamo-3-translate-0.8b",
             timeout: opts.plamo_translator_timeout ?? 60,
+            max_tokens: opts.plamo_translator_max_tokens ?? 512,
             auto_unload: opts.plamo_translator_auto_unload ?? false,
             idle_seconds: opts.plamo_translator_idle_seconds ?? 300,
             token: "",
@@ -213,7 +225,19 @@
         const direction = field("direction");
         const status = field("status");
         const modelIndicator = field("model-state");
-        const settings = root.querySelector(".plamo-settings");
+        const settings = root.querySelector(".plamo-settings:not(.plamo-languages)");
+        const languageMenu = root.querySelector(".plamo-languages");
+        const sourceLanguage = field("source-language");
+        const targetLanguage = field("target-language");
+        const languageKey = "plamo-translator:languages:" + tab;
+        try {
+            const saved = JSON.parse(localStorage.getItem(languageKey));
+            if (saved && [...sourceLanguage.options].some(o => o.value === saved.source)
+                    && [...targetLanguage.options].some(o => o.value === saved.target)) {
+                sourceLanguage.value = saved.source;
+                targetLanguage.value = saved.target;
+            }
+        } catch { /* Language selection still works without browser storage. */ }
         const settingsStatus = field("settings-status");
         const unloadHint = field("unload-hint");
         const modelPicker = field("model-picker");
@@ -260,12 +284,43 @@
             if (modelList.options.length && modelList.options[0].textContent !== t("choose")) {
                 modelList.options[0].textContent = t("choose");
             }
-            const directionLabel = t(direction.value === "en" ? "toEnglish" : "toJapanese");
-            direction.textContent = directionLabel;
-            direction.setAttribute("aria-label", t("direction") + " — " + directionLabel);
+            const names = new Intl.DisplayNames([japanese() ? "ja" : "en"], {type: "language"});
+            const languageLabel = code => ({auto: t("auto"), "zh-hans": t("simplifiedChinese"),
+                "zh-hant": t("traditionalChinese")}[code] ?? names.of(code));
+            for (const select of [sourceLanguage, targetLanguage]) {
+                const selected = select.value;
+                const priority = ["auto", "en", "zh-hans", "zh-hant", "ja"];
+                const options = [...select.options];
+                for (const option of options) option.textContent = languageLabel(option.value);
+                options.sort((a, b) => {
+                    const rank = code => priority.includes(code) ? priority.indexOf(code) : priority.length;
+                    return rank(a.value) - rank(b.value) || a.textContent.localeCompare(b.textContent, root.lang);
+                });
+                select.replaceChildren(...options);
+                select.value = selected;
+            }
+            renderDirection();
             button("check").title = t("checkHint");
             renderModelState();
             render();
+        }
+
+        function renderDirection() {
+            direction.value = targetLanguage.value;
+            const label = `${sourceLanguage.selectedOptions[0].textContent} → ${targetLanguage.selectedOptions[0].textContent}`;
+            // Codes keep both sides visible even for long names such as Chinese variants.
+            const compact = code => code === "auto" ? t("auto") : code.replace(/^([a-z]+)(.*)$/, (_, lang, script) => lang.toUpperCase() + script);
+            direction.textContent = `${compact(sourceLanguage.value)} → ${compact(targetLanguage.value)}`;
+            direction.setAttribute("aria-label", t("direction") + " — " + label);
+            direction.title = label + " — " + t(sourceLanguage.value === "auto" ? "languageSettings" : "swapHint");
+        }
+
+        function languagesChanged() {
+            try {
+                localStorage.setItem(languageKey, JSON.stringify({source: sourceLanguage.value, target: targetLanguage.value}));
+            } catch { /* Private browsing may disable storage. */ }
+            renderDirection();
+            invalidate();
         }
 
         function render() {
@@ -291,7 +346,7 @@
         }
 
         function fillSettings() {
-            for (const key of ["url", "model", "timeout", "token", "idle_seconds"]) field(key).value = config[key];
+            for (const key of ["url", "model", "timeout", "max_tokens", "token", "idle_seconds"]) field(key).value = config[key];
             field("auto_unload").checked = config.auto_unload;
             field("idle_seconds").disabled = !config.auto_unload;
             checkedModels = null;
@@ -303,6 +358,7 @@
                 url: field("url").value,
                 model: field("model").value,
                 timeout: field("timeout").valueAsNumber,
+                max_tokens: Number(field("max_tokens").value),
                 token: field("token").value,
             };
         }
@@ -322,10 +378,17 @@
 
         source.addEventListener("input", invalidate);
         direction.addEventListener("click", () => {
-            direction.value = direction.value === "en" ? "ja" : "en";
-            localize();
-            invalidate();
+            if (sourceLanguage.value === "auto") {
+                openDialog(languageMenu, button("languages"));
+                return;
+            }
+            const previous = sourceLanguage.value;
+            sourceLanguage.value = targetLanguage.value;
+            targetLanguage.value = previous;
+            languagesChanged();
         });
+        sourceLanguage.addEventListener("change", languagesChanged);
+        targetLanguage.addEventListener("change", languagesChanged);
         result.addEventListener("input", () => {
             resultRevision += 1;
             if (accepted === revision) {
@@ -346,47 +409,56 @@
 
         const gear = button("settings");
         const viewport = window.visualViewport;
-        let settingsListeners;
-
-        function positionSettings() {
-            if (!settings.open) return;
+        function positionDialog(dialog, trigger) {
+            if (!dialog.open) return;
             const margin = 12;
             const gap = 6;
             const left = (viewport?.offsetLeft ?? 0) + margin;
             const top = (viewport?.offsetTop ?? 0) + margin;
             const right = left + (viewport?.width ?? document.documentElement.clientWidth) - 2 * margin;
             const bottom = top + (viewport?.height ?? document.documentElement.clientHeight) - 2 * margin;
-            const anchor = gear.getBoundingClientRect();
+            const anchor = trigger.getBoundingClientRect();
             const below = Math.max(top, Math.min(anchor.bottom + gap, bottom));
             const above = Math.max(top, Math.min(anchor.top - gap, bottom));
-            settings.style.setProperty("--plamo-settings-width", `${right - left}px`);
-            const needed = settings.scrollHeight + settings.offsetHeight - settings.clientHeight;
+            dialog.style.setProperty("--plamo-settings-width", `${right - left}px`);
+            const needed = dialog.scrollHeight + dialog.offsetHeight - dialog.clientHeight;
             const openBelow = needed <= bottom - below || bottom - below >= above - top;
             const available = openBelow ? bottom - below : above - top;
-            settings.style.setProperty("--plamo-settings-height", `${available}px`);
-            settings.style.setProperty("--plamo-settings-top", `${openBelow ? below : above - settings.offsetHeight}px`);
-            settings.style.setProperty("--plamo-settings-left",
-                `${Math.max(left, Math.min(anchor.right - settings.offsetWidth, right - settings.offsetWidth))}px`);
+            dialog.style.setProperty("--plamo-settings-height", `${available}px`);
+            dialog.style.setProperty("--plamo-settings-top", `${openBelow ? below : above - dialog.offsetHeight}px`);
+            dialog.style.setProperty("--plamo-settings-left",
+                `${Math.max(left, Math.min(anchor.right - dialog.offsetWidth, right - dialog.offsetWidth))}px`);
         }
 
-        const settingsResize = new ResizeObserver(positionSettings);
+        function openDialog(dialog, trigger) {
+            dialog.showModal();
+            const position = () => positionDialog(dialog, trigger);
+            position();
+            const listeners = new AbortController();
+            const {signal} = listeners;
+            const resize = new ResizeObserver(position);
+            window.addEventListener("resize", position, {signal});
+            window.addEventListener("scroll", position, {signal, capture: true, passive: true});
+            viewport?.addEventListener("resize", position, {signal});
+            viewport?.addEventListener("scroll", position, {signal});
+            resize.observe(dialog);
+            dialog.addEventListener("close", () => {
+                listeners.abort();
+                resize.disconnect();
+            }, {once: true});
+            dialog.addEventListener("click", event => {
+                if (event.target !== dialog) return;
+                const rect = dialog.getBoundingClientRect();
+                if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
+            }, {signal});
+        }
         gear.addEventListener("click", () => {
             showSettingsStatus();
-            settings.showModal();
-            positionSettings();
-            settingsListeners = new AbortController();
-            const {signal} = settingsListeners;
-            window.addEventListener("resize", positionSettings, {signal});
-            window.addEventListener("scroll", positionSettings, {signal, capture: true, passive: true});
-            viewport?.addEventListener("resize", positionSettings, {signal});
-            viewport?.addEventListener("scroll", positionSettings, {signal});
-            settingsResize.observe(settings);
-        });
-        settings.addEventListener("close", () => {
-            settingsListeners?.abort();
-            settingsResize.disconnect();
+            openDialog(settings, gear);
         });
         button("close-settings").addEventListener("click", () => settings.close());
+        button("languages").addEventListener("click", () => openDialog(languageMenu, button("languages")));
+        button("close-languages").addEventListener("click", () => languageMenu.close());
 
         function showCheckedModel() {
             if (!checkedModels) return;
@@ -503,7 +575,7 @@
                     return;
                 }
                 const next = {...reply.config, token: values.token};
-                const changed = ["url", "model", "timeout", "token"].some((key) => next[key] !== config[key]);
+                const changed = ["url", "model", "timeout", "max_tokens", "token"].some((key) => next[key] !== config[key]);
                 config = next;
                 for (const panel of panels.values()) {
                     panel.fillSettings();
@@ -543,8 +615,8 @@
                     return;
                 }
                 if (modelState === "notLoaded") setModelState("loadingModel");
-                status.textContent = t(modelState === "loadingModel" ? "loadingModel" : "translating");
-                const reply = await send("translate", {...config, source: source.value, target: direction.value});
+                status.textContent = t(modelState === "loadingModel" ? "loadingModel" : (Array.from(source.value).length > 2000 ? "translatingLong" : "translating"));
+                const reply = await send("translate", {...config, source: source.value, target: targetLanguage.value, source_lang: sourceLanguage.value});
                 if (reply.status === "translated" || reply.status === "partial") setModelState("ready");
                 if (request !== current) return;
                 if (current.revision !== revision) {
@@ -639,6 +711,7 @@
                 const home = positiveRow.parentElement === container && negativeRow.parentElement === container;
                 root.hidden = !home;
                 if (!home && settings.open) settings.close();
+                if (!home && languageMenu.open) languageMenu.close();
                 if (home && positiveRow.nextElementSibling !== root) positiveRow.after(root);
             };
             new MutationObserver(place).observe(container, {childList: true});
@@ -688,7 +761,7 @@
         // current saved defaults so freshly opened browsers see new settings.
         try {
             const reply = await send("defaults", {});
-            config = {...reply.config, token: ""};
+            config = {...readDefaults(), ...reply.config, token: ""};
         } catch {
             config = readDefaults();
         }
