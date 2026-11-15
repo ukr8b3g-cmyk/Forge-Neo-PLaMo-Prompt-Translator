@@ -186,12 +186,12 @@ async def translate(config, token, source, target, on_use=None):
 
     async with asyncio.timeout(config["timeout"]):
         instance_id, context_length = await prepare_model(config, token)
+        if on_use is not None:
+            on_use(instance_id)
         # The UTF-8 byte count is a conservative preflight estimate for the
         # byte-fallback tokenizer. Leave room for the template and output.
         if type(context_length) is int and len(source.encode("utf-8", errors="replace")) + 640 > context_length:
             raise TranslationError("context")
-        if on_use is not None:
-            on_use(instance_id)
         response = await request(config, token, "/v1/chat/completions", {
             "model": instance_id,
             "messages": [

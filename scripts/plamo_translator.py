@@ -134,12 +134,13 @@ async def translate(config, token, source, target):
         key = (config["url"], instance_id)
         stop_unload(key)
 
-    result = await backend.translate(config, token, source, target, on_use)
-    if key is not None and getattr(shared.opts, PREFIX + "auto_unload"):
-        model = IdleModel({**config, "timeout": min(config["timeout"], 10)}, token, time.monotonic())
-        idle_models[key] = model
-        arm_unload(key, model)
-    return result
+    try:
+        return await backend.translate(config, token, source, target, on_use)
+    finally:
+        if key is not None and getattr(shared.opts, PREFIX + "auto_unload"):
+            model = IdleModel({**config, "timeout": min(config["timeout"], 10)}, token, time.monotonic())
+            idle_models[key] = model
+            arm_unload(key, model)
 
 
 async def handle(request):
@@ -246,6 +247,7 @@ PANEL = """
     <button type="button" data-action="check" data-text="check">Test Connection</button>
     <button type="button" data-action="save" class="plamo-primary" data-text="saveLabel">Save</button>
   </div>
+  <div class="plamo-status" data-field="unload-hint" data-text="unloadSaveFirst" role="status" hidden></div>
   <div class="plamo-status" data-field="settings-status" role="status"></div>
 </dialog>
 """

@@ -36,6 +36,7 @@
         autoUnload: ["Auto-unload","自動アンロード"],
         unloadNow: ["Unload Now","今すぐアンロード"],
         unloadHint: ["Unload the model used by Translate","翻訳に使うモデルをアンロード"],
+        unloadSaveFirst: ["Save the connection settings to unload the model.","アンロードするには接続設定を保存してください。"],
         unloading: ["Unloading model…","モデルをアンロード中…"],
         unloadedNow: ["Model unloaded.","モデルをアンロードしました。"],
         alreadyUnloaded: ["Model is already unloaded.","モデルはすでに未ロードです。"],
@@ -214,8 +215,10 @@
         const modelIndicator = field("model-state");
         const settings = root.querySelector(".plamo-settings");
         const settingsStatus = field("settings-status");
+        const unloadHint = field("unload-hint");
         const modelPicker = field("model-picker");
         const modelList = field("models");
+        const modelFields = ["url", "model", "token"];
         const restore = field("restore-box");
         const positive = () => gradioApp().querySelector("#" + tab + "_prompt textarea");
 
@@ -274,7 +277,9 @@
             button("copy").disabled = !result.value.trim();
             button("append").disabled = !valid || Boolean(request) || !result.value.trim() || invalidSyntax.test(result.value);
             button("check").disabled = pending;
-            button("unload").disabled = pending || !config.model;
+            const needsSave = unloadTargetChanged();
+            button("unload").disabled = pending || !config.model || needsSave;
+            unloadHint.hidden = !needsSave;
             button("save").disabled = pending;
             button("undo").disabled = !lastAppend;
         }
@@ -300,6 +305,10 @@
                 timeout: field("timeout").valueAsNumber,
                 token: field("token").value,
             };
+        }
+
+        function unloadTargetChanged() {
+            return modelFields.some(key => field(key).value !== config[key]);
         }
 
         field("auto_unload").addEventListener("change", () => {
@@ -390,6 +399,7 @@
         modelList.addEventListener("change", () => {
             if (modelList.value) field("model").value = modelList.value;
             showCheckedModel();
+            render();
         });
         field("model").addEventListener("input", showCheckedModel);
         for (const key of ["url", "token"]) field(key).addEventListener("input", () => {
@@ -397,6 +407,10 @@
             modelPicker.hidden = true;
             showSettingsStatus();
         });
+        for (const key of modelFields) {
+            field(key).addEventListener("input", render);
+            field(key).addEventListener("change", render);
+        }
 
         button("check").addEventListener("click", async () => {
             if (pending) return;
@@ -404,8 +418,8 @@
             busy(true);
             checkedModels = null;
             showSettingsStatus("checking");
-            const sameDraft = () => ["url", "model", "token"].every((key) => field(key).value === values[key]);
-            const currentModel = ["url", "model", "token"].every((key) => values[key] === config[key]);
+            const sameDraft = () => modelFields.every(key => field(key).value === values[key]);
+            const currentModel = !unloadTargetChanged();
             try {
                 const reply = await send("check", values);
                 if (reply.status !== "connected") {
@@ -450,7 +464,7 @@
         });
 
         button("unload").addEventListener("click", async () => {
-            if (pending || !config.model) return;
+            if (pending || !config.model || unloadTargetChanged()) return;
             busy(true);
             showSettingsStatus("unloading");
             try {
