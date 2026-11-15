@@ -650,11 +650,35 @@
         return {render, invalidate, fillSettings, localize, renderModelState};
     }
 
+    function rememberAccordion(accordion, tab) {
+        const key = "plamo-translator:accordion:" + tab;
+        try {
+            const saved = localStorage.getItem(key);
+            if (saved === "open" || saved === "closed") accordion.open = saved === "open";
+        } catch {
+            // The accordion still works when browser storage is unavailable.
+            return;
+        }
+
+        let wasOpen = accordion.open;
+        accordion.addEventListener("toggle", () => {
+            if (accordion.open === wasOpen) return;
+            wasOpen = accordion.open;
+            try {
+                localStorage.setItem(key, wasOpen ? "open" : "closed");
+            } catch {
+                // Keep the current state even if the browser cannot save it.
+            }
+        });
+    }
+
     function mount() {
         for (const tab of tabs) {
             const root = gradioApp().getElementById("plamo_" + tab);
-            if (!root?.querySelector(".plamo-panel") || mounted.has(root)) continue;
+            const accordion = root?.querySelector(".plamo-panel");
+            if (!accordion || mounted.has(root)) continue;
             mounted.add(root);
+            rememberAccordion(accordion, tab);
             panels.set(tab, panelFor(root, tab));
         }
     }
