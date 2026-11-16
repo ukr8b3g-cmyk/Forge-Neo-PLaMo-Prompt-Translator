@@ -99,10 +99,38 @@ class Translation(unittest.IsolatedAsyncioTestCase):
         self.request.assert_not_awaited()
 
     async def test_input_limit_and_syntax_before_model_load(self):
-        for text, error in (("A" * 16001, "size"), ("<lora:fixture:1>", "syntax"), ("", "input")):
+        cases = [
+            ("A" * 16001, "size"),
+            ("", "input"),
+            ("<lora:fixture:1>", "syntax"),
+            ("(red coat:1.2)", "syntax"),
+            ("(red (winter coat):1.2)", "syntax"),
+            ("[night:day:0.5]", "syntax"),
+            ("[cat|dog]", "syntax"),
+            ("cat BREAK dog", "syntax"),
+            ("__season__", "syntax"),
+            ("<|plamo:tag|>", "syntax"),
+        ]
+        for text, error in cases:
             with self.assertRaisesRegex(backend.TranslationError, error):
                 await self.translate(text)
         self.prepare.assert_not_awaited()
+        self.request.assert_not_awaited()
+
+    async def test_ordinary_punctuation_reaches_translation_unchanged(self):
+        sources = [
+            "A woman (adult) in a red coat.",
+            "Camera [front view].",
+            "開始時間: 10",
+            "成人の女性（赤いコート）。",
+            r"Open C:\Pictures\reference.jpg.",
+        ]
+        for source in sources:
+            with self.subTest(source=source):
+                self.request.return_value = completion(source)
+                self.assertEqual(await self.translate(source), {"status": "translated", "text": source})
+                payload = self.request.call_args.args[3]
+                self.assertEqual(payload["messages"][1]["content"], source)
 
     async def test_total_deadline_covers_all_pieces(self):
         self.config["timeout"] = 0.07

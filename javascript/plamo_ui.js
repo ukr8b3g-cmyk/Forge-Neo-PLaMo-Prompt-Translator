@@ -4,7 +4,16 @@
     const tabs = ["txt2img", "img2img"];
     const mounted = new WeakSet();
     const panels = new Map();
-    const invalidSyntax = /<[^<>\n]+:[^<>\n]+>|[()[\]\\]|\b(?:AND|BREAK)\b|__[^_\n].*?__|:\s*[+-]?(?:\d+(?:\.\d+)?|\.\d+)[ \t]*$/m;
+    const promptSyntax = [
+        /<\|plamo:[^>]*\|>/i,
+        /<[\p{L}\p{N}_]+:[^<>\r\n]+>/u,
+        /\((?:[^()\r\n]|\([^()\r\n]*\))*:[ \t]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)[ \t]*\)/,
+        /\[[^\[\]\r\n]*:[ \t]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[ \t]*\]/,
+        /\[[^\[\]\r\n]*\|[^\[\]\r\n]*\]/,
+        /(?<![\p{L}\p{N}_])(?:AND|BREAK)(?![\p{L}\p{N}_])/u,
+        /__[^_\n].*?__/,
+    ];
+    const hasPromptSyntax = (text) => promptSyntax.some(pattern => pattern.test(text));
     const strings = {
         heading: ["PLaMo Translator","PLaMo 翻訳"],
         direction: ["Translation direction","翻訳方向"],
@@ -70,7 +79,7 @@
         save: ["Could not save the Forge settings.","Forge の設定を保存できませんでした。"],
         server: ["LM Studio could not complete the request. Check its Developer tab.","LM Studio で処理できませんでした。Developer 画面を確認してください。"],
         size: ["Keep the source within 16,000 characters / 64 KiB.","原文は16,000文字・64 KiB以内にしてください。"],
-        syntax: ["The source contains prompt syntax. Enter only the text you want translated.","原文に LoRA、重み、括弧などのプロンプト構文があります。翻訳する文章だけを入力してください。"],
+        syntax: ["Remove LoRA tags, explicit weights, or other prompt controls from the source.","LoRAタグ、数値付きの重み指定などのプロンプト制御構文を原文から除いてください。"],
         timeout_value: ["Use a whole number from 1 to 600 seconds.","タイムアウトは 1～600 秒の整数で指定してください。"],
         modelNotFound: ["Model not found","モデルが見つかりません"],
         loadFailed: ["LM Studio could not load the selected model. Check its Developer tab.","LM Studio でモデルを読み込めませんでした。Developer 画面を確認してください。"],
@@ -330,7 +339,7 @@
             if (button("translate").textContent !== label) button("translate").textContent = label;
             button("translate").disabled = !request && (pending || !source.value.trim());
             button("copy").disabled = !result.value.trim();
-            button("append").disabled = !valid || Boolean(request) || !result.value.trim() || invalidSyntax.test(result.value);
+            button("append").disabled = !valid || Boolean(request) || !result.value.trim() || hasPromptSyntax(result.value);
             button("check").disabled = pending;
             const needsSave = unloadTargetChanged();
             button("unload").disabled = pending || !config.model || needsSave;
@@ -392,7 +401,7 @@
         result.addEventListener("input", () => {
             resultRevision += 1;
             if (accepted === revision) {
-                status.textContent = invalidSyntax.test(result.value)
+                status.textContent = hasPromptSyntax(result.value)
                     ? t("invalidResult")
                     : t("edited");
             }
@@ -629,7 +638,7 @@
                     if (reply.status === "translated") accepted = revision;
                     status.textContent = reply.status === "partial"
                         ? t("partial")
-                        : (invalidSyntax.test(reply.text) ? t("invalidResult") : t("translated"));
+                        : (hasPromptSyntax(reply.text) ? t("invalidResult") : t("translated"));
                 } else {
                     status.textContent = errorText(reply.status) + (result.value ? " " + t("oldResult") : "");
                 }

@@ -29,7 +29,14 @@ SPLIT_BOUNDARIES = (
 )
 STOP = ["<|plamo:tag|>", "<|plamo:bos|>"]
 CONTROL_TOKEN = re.compile(r"<\|plamo:[^>]*\|>", re.IGNORECASE)
-PROMPT_SYNTAX = re.compile(r"<[^<>\n]+:[^<>\n]+>|[()[\]\\]|\b(?:AND|BREAK)\b|__[^_\n].*?__|:\s*[+-]?(?:\d+(?:\.\d+)?|\.\d+)[ \t]*$", re.MULTILINE)
+# Match explicit Forge constructs. Ordinary punctuation can be part of the source.
+PROMPT_SYNTAX = re.compile(
+    r"<\w+:[^<>\r\n]+>"
+    r"|\((?:[^()\r\n]|\([^()\r\n]*\))*:[ \t]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)[ \t]*\)"
+    r"|\[[^\[\]\r\n]*:[ \t]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[ \t]*\]"
+    r"|\[[^\[\]\r\n]*\|[^\[\]\r\n]*\]"
+    r"|\b(?:AND|BREAK)\b|__[^_\n].*?__"
+)
 
 
 class TranslationError(Exception):

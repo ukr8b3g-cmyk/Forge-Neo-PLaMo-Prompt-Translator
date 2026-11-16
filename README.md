@@ -50,9 +50,9 @@ To update, use **Extensions → Installed → Check for updates → Apply and re
 
 - Open **▾** beside the direction button to select **Source language** and **Translate to**. Normally leave **Source language** on **Auto**. If the source is not recognized correctly, select its language manually.
 - **Translate to** is the destination language. For image prompts, start with **English**, or choose **Chinese** when that suits the image model you use. You can also translate into Japanese or any of PLaMo's other supported languages. The output language is always selected explicitly.
-- Enter text or use **Import Positive** to copy the current Positive prompt into the source. Keep LoRA references and prompt-weight syntax in Positive and translate the plain-text portion.
+- Enter text or use **Import Positive** to copy the current Positive prompt into the source. Natural-language text can contain ordinary parentheses and brackets, such as `(adult)` and `[front view]`. Add explicit controls such as `<lora:portrait:0.8>` and `(red coat:1.2)` directly in Positive.
 - Click **Translate**. If the selected model is unloaded, the extension asks LM Studio to load it. **Test Connection** can also load the selected model and verify that it is ready.
-- Edit the translation or use **Copy**. Choose **Add** to append it to Positive or **Rep** to replace Positive, then click **Send**. **Undo** restores the previous prompt when it has not been edited since Send.
+- Edit the translation or use **Copy**. Choose **Add** to append it to Positive or **Rep** to replace Positive, then click **Send**. Send preserves the text in the translation field, including ordinary punctuation. Forge interprets that text using its prompt settings when generating. **Undo** restores the previous prompt when it has not been edited since Send.
 - Enable **Auto-unload** to free the translation model after the selected idle time. **Unload Now** releases the selected model immediately. The next translation loads it again.
 
 <img src="docs/images/languages.png" alt="Language selection: leave Source language on Auto and select English under Translate to" width="430">
@@ -153,9 +153,9 @@ https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 
 - 方向ボタン横の **▾** で言語を選びます。左の **Source language（原文の言語）** は、通常 **Auto（自動）** のままで使えます。原文の言語をうまく認識できない場合だけ、手動で選んでください。
 - 右の **Translate to（翻訳先）** は、出力したい言語です。画像生成プロンプトでは、まず **英語** を基本に、使う画像モデルに合わせて **中国語** などを選びます。日本語への確認用の翻訳や、PLaMoが対応するほかの言語への翻訳にも使えます。翻訳先は自動ではなく、必ず指定します。
-- 原文を入力するか、**Import Positive** で現在の Positive を取り込みます。LoRA 参照や重み構文は Positive に残し、翻訳したい文章を原文欄に入れてください。
+- 原文を入力するか、**Import Positive** で現在の Positive を取り込みます。通常の括弧を含む文章（`(adult)`、`[front view]`など）も翻訳できます。`<lora:portrait:0.8>`や`(red coat:1.2)`など、明示的なプロンプト制御構文は Positive に直接入力してください。
 - **Translate** を押すと翻訳します。選択したモデルが未ロードなら LM Studio が自動で読み込みます。**Test Connection** からもモデルをロードして **Ready** を確認できます。
-- 訳文は編集・**Copy** ができます。**Add** は追記、**Rep** は置換です。反映方法を選び **Send** を押します。反映後の Positive が編集されていなければ **Undo** で戻せます。
+- 訳文は編集・**Copy** ができます。**Add** は追記、**Rep** は置換です。**Send** は訳文欄の括弧などをそのまま Positive に渡します。生成時の解釈は Forge のプロンプト設定に従います。反映後の Positive が編集されていなければ **Undo** で戻せます。
 - **Auto-unload** をオンにすると、翻訳に使ったモデルが指定時間後に解放されます。**Unload Now** で即時解放でき、次の翻訳時に再ロードされます。
 
 <img src="docs/images/languages.png" alt="左のSource languageはAuto、右のTranslate toはEnglishを選んだ言語設定" width="430">
