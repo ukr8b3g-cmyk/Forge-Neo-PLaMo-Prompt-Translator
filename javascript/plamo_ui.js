@@ -261,6 +261,48 @@
         let request = null;
         let lastAppend = null;
         let checkedModels = null;
+        const liveKey = `plamo-live-${tab}`;
+        let liveOn = false;
+        try { liveOn = localStorage.getItem(liveKey) === "on"; } catch {}
+        let liveTimer = null, liveDue = false, composing = false;
+        const liveButton = document.createElement("button");
+        liveButton.type = "button";
+        liveButton.dataset.action = "live";
+        button("translate").after(liveButton);
+        function cancelLive() { clearTimeout(liveTimer); liveDue = false; }
+        function scheduleLive() {
+            cancelLive();
+            if (!liveOn || composing || !source.value.trim()) return;
+            liveTimer = setTimeout(() => { liveDue = true; render(); }, 800);
+        }
+        function renderLive() {
+            liveButton.textContent = `${japanese() ? "自動翻訳" : "Live"} ${liveOn ? "ON" : "OFF"}`;
+            liveButton.title = japanese()
+                ? "入力が止まると自動翻訳します。もう一度押すとオフになります。Sendは手動です。"
+                : "Automatically translates after you stop typing. Click again to turn off. Send remains manual.";
+            liveButton.setAttribute("aria-pressed", String(liveOn));
+            liveButton.style.background = liveOn ? "#b83232" : "";
+            liveButton.style.color = liveOn ? "#fff" : "";
+            if (liveDue && !pending && !request && !composing && root.isConnected) {
+                liveDue = false;
+                const expected = revision;
+                queueMicrotask(() => {
+                    if (liveOn && expected === revision && !pending && !request && root.isConnected) void translate();
+                    else if (liveOn && expected === revision && root.isConnected) liveDue = true;
+                });
+            }
+        }
+        liveButton.addEventListener("click", () => {
+            liveOn = !liveOn;
+            cancelLive();
+            try { localStorage.setItem(liveKey, liveOn ? "on" : "off"); } catch {}
+            if (!liveOn && request) { request = null; status.textContent = t("cancelled"); }
+            if (liveOn && accepted !== revision && source.value.trim()) { liveDue = true; }
+            render();
+        });
+        source.addEventListener("compositionstart", () => { composing = true; cancelLive(); });
+        source.addEventListener("compositionend", () => { composing = false; scheduleLive(); });
+
 
         function renderModelState() {
             const label = t(modelState);
@@ -333,8 +375,9 @@
         }
 
         function render() {
+            renderLive();
             const valid = accepted === revision;
-            result.readOnly = Boolean(request);
+            result.readOnly = false;
             const label = t(request ? "cancel" : "translate");
             if (button("translate").textContent !== label) button("translate").textContent = label;
             button("translate").disabled = !request && (pending || !source.value.trim());
@@ -350,6 +393,7 @@
 
         function invalidate() {
             revision += 1;
+            scheduleLive();
             if (result.value && !request) status.textContent = t("stale");
             render();
         }
@@ -399,6 +443,8 @@
         sourceLanguage.addEventListener("change", languagesChanged);
         targetLanguage.addEventListener("change", languagesChanged);
         result.addEventListener("input", () => {
+            cancelLive();
+            if (request) request = null;
             resultRevision += 1;
             if (accepted === revision) {
                 status.textContent = hasPromptSyntax(result.value)
@@ -603,7 +649,7 @@
             }
         });
 
-        button("translate").addEventListener("click", async () => {
+        async function translate() {
             if (request) {
                 request = null;
                 status.textContent = t("cancelled");
@@ -649,7 +695,10 @@
                 busy(false);
                 void refreshModel();
             }
-        });
+        }
+        button("translate").addEventListener("click", () => { cancelLive(); void translate(); });
+
+
 
         button("copy").addEventListener("click", async () => {
             try {

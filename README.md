@@ -206,3 +206,12 @@ https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 
 v1.1はWindowsのForge Neo（Gradio 4.40.0）と実LM Studioで、多言語6方向、14,098文字から8リクエスト・計2,605出力トークンへの長文翻訳、Send・Undo、Compactでの配置復帰を確認しました。Neo・reForge両方のPython環境でテストも通過しています。reForgeの実画面は以前の版で確認済みですが、v1.1の実画面は未検証です。[検証範囲](docs/VALIDATION.md) · [変更履歴](CHANGELOG.md)。LM Studio本体とPLaMoモデルは別途入手してください。画面はForgeの日本語ロケールでは日本語、それ以外では英語で表示します。
 
+
+## Live translation (current main)
+
+Click **Live OFF** beside Translate to enable automatic translation. **Live ON** is red; its tooltip explains the action. Translation starts 800 ms after typing stops, after IME composition completes. Only the newest input is translated next; stale replies do not overwrite edits. Click again to turn it off. Errors are not retried continuously. Send remains manual; Live never changes Positive or starts image generation. The switch is remembered per tab in this browser. Reloading alone does not start translation.
+
+
+## 自動翻訳（最新main）
+
+Translateの隣の **Live OFF／自動翻訳 OFF** を押すと自動翻訳がオンになります。オンは赤色で、マウスを重ねると説明が表示されます。入力停止から800ミリ秒後、日本語IMEの変換確定後に翻訳します。待機するのは最新の原文だけで、古い応答で手編集を上書きしません。もう一度押すとオフになり、エラー時に再試行を繰り返すこともありません。Positiveへの反映は引き続きSendで行います。ブラウザー内でtxt2img／img2imgごとにオン・オフを記憶し、再読み込みだけでは翻訳しません。
