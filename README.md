@@ -1,10 +1,13 @@
 [日本語](#日本語)
 
-# PLaMo Translator for Forge-Neo — v1.1
+# PLaMo Translator for Forge-Neo — v1.2.0
 
 Translate prompts among 53 languages in [Stable Diffusion WebUI Forge - Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) or reForge. The panel sits below the Positive prompt in txt2img and img2img. [LM Studio](https://lmstudio.ai/) runs PLaMo 3 Translate locally.
 
-**v1.1 adds 53-language selection and automatic long-text translation.** Keep the source on **Auto**, choose the output language, and click **Translate** once.
+## What's New in v1.2.0
+
+- **Live translation** translates automatically after you stop typing. Turn it on with **Live OFF** beside **Translate**.
+- **Replace the final period with a comma** is on by default. For example, `Soft lighting.` becomes `Soft lighting,`, so you can continue typing tags in Positive. Turn it off in the gear menu and click **Save** to keep the final period.
 
 ![PLaMo Translator panel in Forge-Neo](docs/images/forge-neo-translator.png)
 
@@ -18,7 +21,7 @@ Translate prompts among 53 languages in [Stable Diffusion WebUI Forge - Neo](htt
 https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 ```
 
-For a manual install, download **Source code (zip)** from [Release v1.1](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v1.1). Extract its top-level folder into the Forge-Neo or reForge `extensions` directory, then restart the WebUI. The extension folder should directly contain `scripts/`, `javascript/`, `languages.json`, `plamo_backend.py`, and `style.css`.
+For a manual install, download **Source code (zip)** from [Release v1.2.0](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v1.2.0). Extract its top-level folder into the Forge-Neo or reForge `extensions` directory, then restart the WebUI. The extension folder should directly contain `scripts/`, `javascript/`, `languages.json`, `plamo_backend.py`, and `style.css`.
 
 To update, use **Extensions → Installed → Check for updates → Apply and restart UI**, then reload the browser. For a manual update, replace the existing extension's files; avoid keeping a second copy alongside it. The original [v0.9 release](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v0.9) remains available separately.
 
@@ -52,12 +55,17 @@ To update, use **Extensions → Installed → Check for updates → Apply and re
 - **Translate to** is the destination language. For image prompts, start with **English**, or choose **Chinese** when that suits the image model you use. You can also translate into Japanese or any of PLaMo's other supported languages. The output language is always selected explicitly.
 - Enter text or use **Import Positive** to copy the current Positive prompt into the source. Natural-language text can contain ordinary parentheses and brackets, such as `(adult)` and `[front view]`. Add explicit controls such as `<lora:portrait:0.8>` and `(red coat:1.2)` directly in Positive.
 - Click **Translate**. If the selected model is unloaded, the extension asks LM Studio to load it. **Test Connection** can also load the selected model and verify that it is ready.
+- To keep typing tags after a translation, **Settings → Replace the final period with a comma** is on by default. For example, `Soft lighting.` becomes `Soft lighting,`. Turn it off and click **Save** to keep the period in future translations. This applies to both Translate and Live.
 - Edit the translation or use **Copy**. Choose **Add** to append it to Positive or **Rep** to replace Positive, then click **Send**. Send preserves the text in the translation field, including ordinary punctuation. Forge interprets that text using its prompt settings when generating. **Undo** restores the previous prompt when it has not been edited since Send.
 - Enable **Auto-unload** to free the translation model after the selected idle time. **Unload Now** releases the selected model immediately. The next translation loads it again.
 
 <img src="docs/images/languages.png" alt="Language selection: leave Source language on Auto and select English under Translate to" width="430">
 
 The menu lists **English → Chinese (Simplified) → Chinese (Traditional) → Japanese**, then the other languages. The compact direction button shows language codes; the menu and tooltip show full names. Click the direction button to swap two explicitly selected languages, or open the menu when the source is Auto. Each tab remembers its language selection in the same browser and origin.
+
+### Live translation
+
+Click **Live OFF** beside Translate to enable automatic translation. **Live ON** is red, and its tooltip explains the action. Translation starts 800 ms after typing stops, once any IME composition finishes. The translator uses the latest input and preserves edits when an older reply arrives. Click the button again to turn it off. The browser remembers the switch separately for txt2img and img2img. Use **Send** to apply the result to Positive.
 
 ### Supported languages
 
@@ -107,7 +115,10 @@ The v1.1 update was tested with Forge Neo (Gradio 4.40.0) and real LM Studio on 
 
 [PLaMo 3 Translate](https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF) と [LM Studio](https://lmstudio.ai/) を使って、Forge-Neo・reForge のプロンプトを53言語間で翻訳する拡張です。txt2img・img2img の Positive 直下に翻訳パネルが追加されます。翻訳はローカルで行います。
 
-**v1.1で53言語の選択と長文の自動分割に対応しました。** 原文は **Auto（自動）** を基本に、翻訳先を選んで **Translate** を1回押すだけです。
+### v1.2.0の新機能
+
+- **自動翻訳（Live）** は、入力が止まると自動で翻訳します。**Translate** の隣の **自動翻訳 OFF** を押すとオンになります。
+- **訳文末尾のピリオドをカンマにする** は初期設定でオンです。`Soft lighting.` が `Soft lighting,` になり、Positiveで続けてタグを入力しやすくなります。ピリオドを残す場合は、歯車の設定でオフにして **保存** します。
 
 ![Forge-Neo の PLaMo Translator パネル](docs/images/forge-neo-translator.png)
 
@@ -121,7 +132,7 @@ The v1.1 update was tested with Forge Neo (Gradio 4.40.0) and real LM Studio on 
 https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 ```
 
-手動で導入する場合は、[v1.1 Release](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v1.1) の **Source code (zip)** を展開し、展開したフォルダーを Forge-Neo または reForge の `extensions` に入れて再起動します。拡張フォルダーの直下に `scripts/`、`javascript/`、`languages.json`、`plamo_backend.py`、`style.css` がある状態にします。
+手動で導入する場合は、[v1.2.0 Release](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v1.2.0) の **Source code (zip)** を展開し、展開したフォルダーを Forge-Neo または reForge の `extensions` に入れて再起動します。拡張フォルダーの直下に `scripts/`、`javascript/`、`languages.json`、`plamo_backend.py`、`style.css` がある状態にします。
 
 更新は **Extensions → Installed → Check for updates → Apply and restart UI** から行い、ブラウザーも再読み込みします。手動更新の場合は既存の拡張フォルダー内を入れ替え、同じ拡張を二重に入れないようにしてください。従来の [v0.9 Release](https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator/releases/tag/v0.9) もそのまま残しています。
 
@@ -155,12 +166,17 @@ https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 - 右の **Translate to（翻訳先）** は、出力したい言語です。画像生成プロンプトでは、まず **英語** を基本に、使う画像モデルに合わせて **中国語** などを選びます。日本語への確認用の翻訳や、PLaMoが対応するほかの言語への翻訳にも使えます。翻訳先は自動ではなく、必ず指定します。
 - 原文を入力するか、**Import Positive** で現在の Positive を取り込みます。通常の括弧を含む文章（`(adult)`、`[front view]`など）も翻訳できます。`<lora:portrait:0.8>`や`(red coat:1.2)`など、明示的なプロンプト制御構文は Positive に直接入力してください。
 - **Translate** を押すと翻訳します。選択したモデルが未ロードなら LM Studio が自動で読み込みます。**Test Connection** からもモデルをロードして **Ready** を確認できます。
+- タグを続けて入力しやすいように、**歯車 → 訳文末尾のピリオドをカンマにする** は初期状態でオンです。たとえば `Soft lighting.` は `Soft lighting,` になります。オフにして **保存** すると、次の翻訳からピリオドを残せます。手動翻訳・自動翻訳の両方に適用されます。
 - 訳文は編集・**Copy** ができます。**Add** は追記、**Rep** は置換です。**Send** は訳文欄の括弧などをそのまま Positive に渡します。生成時の解釈は Forge のプロンプト設定に従います。反映後の Positive が編集されていなければ **Undo** で戻せます。
 - **Auto-unload** をオンにすると、翻訳に使ったモデルが指定時間後に解放されます。**Unload Now** で即時解放でき、次の翻訳時に再ロードされます。
 
 <img src="docs/images/languages.png" alt="左のSource languageはAuto、右のTranslate toはEnglishを選んだ言語設定" width="430">
 
 選択肢は **英語 → 中国語（簡体字）→ 中国語（繁体字）→ 日本語 → その他** の順です。通常のボタンには短い言語コードを表示し、メニューとツールチップには言語名を表示します。原文・翻訳先を指定した場合は方向ボタンで入れ替わり、原文が自動の場合は言語メニューが開きます。同じブラウザー・接続先では、タブごとに選択を記憶します。
+
+### 自動翻訳（Live）
+
+Translateの隣の **自動翻訳 OFF** を押すとオンになります。オンの間はボタンが赤く表示され、マウスを重ねると操作の説明が出ます。入力停止から800ミリ秒後、日本語IMEの変換が確定してから翻訳します。入力を直した場合は最新の原文を使い、訳文の手編集は古い応答が届いても保持します。もう一度押すとオフになります。オン・オフはブラウザー内でtxt2imgとimg2imgごとに記憶します。Positiveへの反映には **Send** を使います。
 
 ### 対応言語
 
@@ -205,13 +221,3 @@ https://github.com/ukr8b3g-cmyk/Forge-Neo-PLaMo-Prompt-Translator.git
 対応言語は[PFN公式の53言語](https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF#supported-languages)です。中国語は簡体字・繁体字を別々に選べます。実装の言語コード一覧は [languages.json](languages.json) にあります。
 
 v1.1はWindowsのForge Neo（Gradio 4.40.0）と実LM Studioで、多言語6方向、14,098文字から8リクエスト・計2,605出力トークンへの長文翻訳、Send・Undo、Compactでの配置復帰を確認しました。Neo・reForge両方のPython環境でテストも通過しています。reForgeの実画面は以前の版で確認済みですが、v1.1の実画面は未検証です。[検証範囲](docs/VALIDATION.md) · [変更履歴](CHANGELOG.md)。LM Studio本体とPLaMoモデルは別途入手してください。画面はForgeの日本語ロケールでは日本語、それ以外では英語で表示します。
-
-
-## Live translation (current main)
-
-Click **Live OFF** beside Translate to enable automatic translation. **Live ON** is red; its tooltip explains the action. Translation starts 800 ms after typing stops, after IME composition completes. Only the newest input is translated next; stale replies do not overwrite edits. Click again to turn it off. Errors are not retried continuously. Send remains manual; Live never changes Positive or starts image generation. The switch is remembered per tab in this browser. Reloading alone does not start translation.
-
-
-## 自動翻訳（最新main）
-
-Translateの隣の **Live OFF／自動翻訳 OFF** を押すと自動翻訳がオンになります。オンは赤色で、マウスを重ねると説明が表示されます。入力停止から800ミリ秒後、日本語IMEの変換確定後に翻訳します。待機するのは最新の原文だけで、古い応答で手編集を上書きしません。もう一度押すとオフになり、エラー時に再試行を繰り返すこともありません。Positiveへの反映は引き続きSendで行います。ブラウザー内でtxt2img／img2imgごとにオン・オフを記憶し、再読み込みだけでは翻訳しません。

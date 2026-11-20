@@ -53,6 +53,7 @@
         output_size: ["The combined translation is too large. Shorten the source.","結合後の訳文が長すぎます。原文を短くしてください。"],
         token: ["API token (optional)","API トークン（任意）"],
         autoUnload: ["Auto-unload","自動アンロード"],
+        finalComma: ["Replace the final period with a comma","訳文末尾のピリオドをカンマにする"],
         unloadNow: ["Unload Now","今すぐアンロード"],
         unloadHint: ["Unload the model used by Translate","翻訳に使うモデルをアンロード"],
         unloadSaveFirst: ["Save the connection settings to unload the model.","アンロードするには接続設定を保存してください。"],
@@ -170,6 +171,7 @@
             model: opts.plamo_translator_model ?? "plamo-3-translate-0.8b",
             timeout: opts.plamo_translator_timeout ?? 60,
             max_tokens: opts.plamo_translator_max_tokens ?? 512,
+            final_comma: opts.plamo_translator_final_comma ?? true,
             auto_unload: opts.plamo_translator_auto_unload ?? false,
             idle_seconds: opts.plamo_translator_idle_seconds ?? 300,
             token: "",
@@ -248,6 +250,8 @@
             }
         } catch { /* Language selection still works without browser storage. */ }
         const settingsStatus = field("settings-status");
+        // A running Forge can still serve the old panel HTML until its next restart.
+        const finalComma = field("final_comma");
         const unloadHint = field("unload-hint");
         const modelPicker = field("model-picker");
         const modelList = field("models");
@@ -401,6 +405,7 @@
         function fillSettings() {
             for (const key of ["url", "model", "timeout", "max_tokens", "token", "idle_seconds"]) field(key).value = config[key];
             field("auto_unload").checked = config.auto_unload;
+            if (finalComma) finalComma.checked = config.final_comma;
             field("idle_seconds").disabled = !config.auto_unload;
             checkedModels = null;
             modelPicker.hidden = true;
@@ -623,6 +628,7 @@
                 const reply = await send("save", {
                     ...values,
                     auto_unload: autoUnload,
+                    final_comma: finalComma?.checked,
                     idle_seconds: validIdleTime ? idleSeconds : config.idle_seconds,
                 });
                 if (reply.status !== "saved") {
@@ -679,7 +685,9 @@
                     return;
                 }
                 if (reply.status === "translated" || reply.status === "partial") {
-                    result.value = reply.text;
+                    result.value = reply.status === "translated" && finalComma && config.final_comma
+                        ? reply.text.replace(/(?<!\.)\.(?=\s*$)/u, ",")
+                        : reply.text;
                     resultRevision += 1;
                     if (reply.status === "translated") accepted = revision;
                     status.textContent = reply.status === "partial"

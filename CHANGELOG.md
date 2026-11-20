@@ -1,5 +1,15 @@
 # Changes / 変更履歴
 
+## v1.2.0 — 2026-11-20
+
+- Enable **Live** to translate automatically 800 ms after typing stops.
+- Replace a single trailing period in completed translations with a comma. The gear menu setting applies to Translate and Live and is enabled by default.
+
+### 日本語
+
+- **自動翻訳（Live）** をオンにすると、入力が止まって800ミリ秒後に翻訳を開始します。
+- 完成した訳文の末尾にある半角ピリオドをカンマに変換できます。手動翻訳と自動翻訳の両方に適用されます。歯車の設定から切り替えられ、初期値はオンです。
+
 ## v1.1 — 2026-11-16
 
 - Select among 53 languages, with Auto source detection and explicit target selection. English, Simplified Chinese, Traditional Chinese, and Japanese appear first.

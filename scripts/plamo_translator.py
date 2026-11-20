@@ -36,6 +36,7 @@ DEFAULTS = {
     "model": backend.DEFAULT_MODEL,
     "timeout": backend.DEFAULT_TIMEOUT,
     "max_tokens": backend.DEFAULT_MAX_TOKENS,
+    "final_comma": True,
     "auto_unload": False,
     "idle_seconds": 300,
 }
@@ -61,6 +62,7 @@ def register_settings():
         "model": "LM Studio のモデル ID",
         "timeout": "翻訳全体のタイムアウト（秒）",
         "max_tokens": "最大出力トークン数／1回",
+        "final_comma": "訳文末尾のピリオドをカンマにする",
         "auto_unload": "自動アンロード",
         "idle_seconds": "アンロードまでの待ち時間（秒）",
     }
@@ -178,6 +180,10 @@ async def handle(request):
             token = request.get("token", "")
             if action == "save":
                 config.update(idle_settings(request))
+                final_comma = request.get("final_comma", getattr(shared.opts, PREFIX + "final_comma"))
+                if type(final_comma) is not bool:
+                    raise backend.TranslationError("request")
+                config["final_comma"] = final_comma
                 save_defaults(config)
                 for key, model in list(idle_models.items()):
                     if config["auto_unload"]:
@@ -265,8 +271,9 @@ PANEL = """
     <label><span data-text="maxTokens">Maximum output tokens</span><select data-field="max_tokens"><option>256</option><option selected>512</option><option>1024</option><option>2048</option></select></label>
     <span class="plamo-full plamo-status" data-text="tokensHint">Per segment. The combined translation can exceed this limit.</span>
     <label class="plamo-full"><span data-text="token">API token (optional)</span><input data-field="token" type="password" autocomplete="off"></label>
-    <label class="plamo-auto-unload"><input data-field="auto_unload" type="checkbox"><span data-text="autoUnload">Auto-unload</span></label>
+    <label class="plamo-check"><input data-field="auto_unload" type="checkbox"><span data-text="autoUnload">Auto-unload</span></label>
     <label><span data-text="idleSeconds">Idle time (seconds)</span><input data-field="idle_seconds" type="number" min="1" step="1" disabled></label>
+    <label class="plamo-check plamo-full"><input data-field="final_comma" type="checkbox" checked><span data-text="finalComma">Replace the final period with a comma</span></label>
   </div>
   <div class="plamo-settings-actions">
     <button type="button" data-action="unload" data-text="unloadNow" data-tooltip="unloadHint">Unload Now</button>
